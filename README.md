@@ -6,6 +6,8 @@ Good News! If you are not serving your Rails App on Linux, then you don't need t
 
 In our set-up we use CentOS 6.3, NginX 1.2.3, Unicorn 4.4.0, Rails 3.2.x and Ruby 1.9.3, and we include an easy way to roll your own Ruby RPM.
 
+## Advantages
+
 Advantages of deploying a Rails app via RPM include:
 
  * use Linux's native and robust deployment mechanism to deploy your Rails app
@@ -21,18 +23,27 @@ Advantages of deploying a Rails app via RPM include:
  * your deployment mechanism is more robust against RubyGems.org or GitHub outages.
  * your Git server doesn't become a bottleneck.
 
+If you are not convinced yet, you can read more about the motivation here (TBD).
 
-## Motivation
+## The Only Down-side ;-)
 
-## 10,000ft Overview
+The only down-side I can think of is that you will need one additional (very small) server, which runs the identical OS as your production servers -- we'll call this our build server. On the build server you'll build your RPM(s), which includes running `bundle install` and compiling native extension, and also rolling your own Ruby 1.9.x RPM. 
+
+## 10,000ft Overview of our Set-Up
 
 ... to be continued shortly ...
 
-## How To
+## How To Build 
+
+## How To Deploy
+
+## System Requirements
 
 
 
-## Installation
+-------------------
+
+## Gem Installation
 
 Add this line to your application's Gemfile:
 
@@ -46,11 +57,11 @@ Or install it yourself as:
 
     $ gem install deploy_rails_as_rpm
 
-## Usage
+## Gem Usage
 
 TODO: Write usage instructions here
 
-## Contributing
+## Contributing to this Gem
 
 1. Fork it
 2. Create your feature branch (`git checkout -b my-new-feature`)
