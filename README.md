@@ -27,7 +27,9 @@ If you are not convinced yet, you can read more about the motivation here (TBD).
 
 ## The Only Down-side ;-)
 
-The only down-side I can think of is that you will need one additional (very small) server, which runs the identical OS as your production servers -- we'll call this our build server. On the build server you'll build your RPM(s), which includes running `bundle install` and compiling native extension, and also rolling your own Ruby 1.9.x RPM. This is the only server which has development tools on it, and it can be in-house behind your corporate firewall. You will only need to spin-up this build server in preparation of a release / deployment.
+The only down-side I can think of is that you will need one additional (small) build server, which runs the identical OS as your production servers. On the build server you'll build your RPM(s), which includes running `bundle install` and compiling native extension, and also rolling your own Ruby 1.9.x RPM. This is the only server which has development tools on it, and it can be in-house behind your corporate firewall. You will only need to spin-up this build server in preparation of a release / deployment.
+
+You should also have a (small) staging server which is an identical twin to your production servers, and which only needs to be spun-up for testing your final RPM deployment.
 
 ## 10,000ft Overview of our Set-Up
 
