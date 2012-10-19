@@ -11,6 +11,7 @@ In our set-up we use CentOS 6.3, NginX 1.2.3, Unicorn 4.4.0, Rails 3.2.x and Rub
 Advantages of deploying a Rails app via RPM include:
 
  * use Linux's native and robust deployment mechanism to deploy your Rails app
+ * RPMs already include pre- and post- installation scripts which we can leverage for automation around house-keeping tasks, and for restarting our Unicorns.
  * your Rails App RPM can require any necessary system libraries if your Gems need them
    (never again get stuck by a missing library.so file during deployment)
  * during deployment:
