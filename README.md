@@ -25,7 +25,7 @@ Advantages of deploying a Rails app via RPM include:
 
 If you are not convinced yet, you can read more about the motivation here (TBD).
 
-## The Only Down-side ;-)
+## Any Down-side?
 
 The only down-side I can think of is that you will need one additional (small) build server, which runs the identical OS as your production servers. On the build server you'll build your RPM(s), which includes running `bundle install` and compiling native extension, and also rolling your own Ruby 1.9.x RPM. This is the only server which has development tools on it, and it can be in-house behind your corporate firewall. You will only need to spin-up this build server in preparation of a release / deployment.
 
