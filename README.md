@@ -4,7 +4,7 @@ Good News! If you are not serving your Rails App on Linux, then you don't need t
 
 `deploy_rails_as_rpm` is a Ruby Gem which helps you generate an RPM spec file for your Rails application, which you can use to build an RPM of your Rails app, which you can then deploy quickly to your production servers via your Linux server's native RPM installation mechanism, e.g. yum, apt-get, or rpm.
 
-In our set-up we use CentOS 6.3, NginX 1.2.3, Unicorn 4.4.0, Rails 3.2.x and Ruby 1.9.3, and we include an easy way to roll your own Ruby RPM.
+In our set-up we use CentOS 6.3, NginX 1.2.3, Unicorn 4.4.0, Rails 3.2.x and Ruby 1.9.3, and besides creating an RPM for your Rails App, we also include an easy way to roll your own RPM for the Ruby version you need in production.
 
 ## Advantages
 
