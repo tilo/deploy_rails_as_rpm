@@ -35,9 +35,11 @@ You should also have a (small) staging server which is an identical twin to your
 
 ... to be continued shortly ...
 
-## How To Build 
+## Creating your customized RPM spec
 
-## How To Deploy
+## Building your Rails App RPM
+
+## Deploying your Rails App RPM
 
 ## System Requirements
 
