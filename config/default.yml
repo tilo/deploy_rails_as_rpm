@@ -1,0 +1,38 @@
+app:
+  name:    hello_world # your rails app's name
+  version: 1.0.0       # your rails app's version
+
+rpm:
+  revision: 1        # each time you create the same RPM, the revision needs to be incremented, otherwise 1
+  packager: Tilo Sloboda <tilo.sloboda@gmail.com>   # your name and email
+  arch:  x86_64       # which architecture is this for? e.g. x86_64
+#
+#  serial:   12345     # optional; Serial is a consecutively growing number
+#  vendor:   ACME Inc. # optional; your company name if you distribute this RPM
+#  license:  MIT       # optional; licensing terms if you distribute this RPM
+
+  requires:
+  - libxml2
+  - libyaml
+  - libffi
+  - nginx
+  - sqlite3
+  - sqlite3-devel
+
+git:
+  repo: https://github.com/your-id/your-project.git
+
+build:
+  user: build
+  group: build
+
+deploy:
+  user: rails
+  group: rails
+
+description: 
+  This is an RPM which packages a Rails Application, all it\'s necessary Gems,\nand contains pre and post hooks in the RPM installation process to properly\nset-up the app on the production server(s).
+
+
+
+

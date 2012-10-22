@@ -23,6 +23,7 @@ Advantages of deploying a Rails app via RPM include:
  * you can quickly start additional production servers from a template and launch your Rails App in seconds
  * your deployment mechanism is more robust against RubyGems.org or GitHub outages.
  * your Git server doesn't become a bottleneck.
+ * you will have fewer moving parts on your production servers.. fewer things to break.
 
 If you are not convinced yet, you can read more about the motivation here (TBD).
 
@@ -37,12 +38,35 @@ You should also have a (small) staging server which is an identical twin to your
 ... to be continued shortly ...
 
 ## Creating your customized RPM spec
+Creating your customized RPM spec is ridiculously easy:
+
+    rake rpm:spec:create
+
+
+you then have several options on how you want to deploy your RPM on your servers
 
 ## Building your Rails App RPM
 
+After you set-up your build server as described under the (tbd)[prerequisites], you can create a new RPM for your Rails App, by running:
+
+    rpmbuild -bb <RPM.spec>
+    
+This will generate the RPM for your Linux distribution under ./rpmbuild/RPMS/
+
+If you should get any complains about libraries missing, you will need to add these to the `./config/rpm/dependencies.yaml` file,
+re-generate the RPM-spec file and re-run the rpmbuild command, as described in the (tbd)[build procedures].
+
+If in the future Bundler or RubyGems can provide a mechanism to query the system library dependencies for each Gem or bundle, 
+we can eliminate this itterative process.
+
+
 ## Deploying your Rails App RPM
 
+You have several choices on how to distribute your Rails App RPM file to your production servers, e.g. you could rsync or scp them, or fun your own yum repository.
+Once the RPM is made available to your production server(s), simply run the native package update mechanism (apt-get, yum) to install it, or do a `rpm -Uhv rpm-file-name`.
+
 ## System Requirements
+
 
 
 

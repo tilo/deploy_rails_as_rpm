@@ -1,0 +1,315 @@
+# RPM Spec File for Rails Application deployment via RPM
+#
+# by Tilo Sloboda, 2012-10-17
+#
+# For Details on deploying Rails Apps via RPM, see: http://www.unixgods.org/~tilo/deploying-rails-apps-via-rpms.html
+# For Details on RPM spec file format, see: http://www.rpm.org/max-rpm/
+#
+# the RPM package's name is always in the form: <name>-<version>-<release>
+#
+
+# We should use a separate bulid user, not root, to create the RPMs
+#
+Name: <%= opts['app']['name'] %>
+# we should get the tagged version from Git here OR from a checked-in 'version.rb' file:
+Version: <%= opts['app']['version'] %>
+# Release: this should be incremented when we try to build this RPM multiple times!
+Release: <%= opts['rpm']['revision'] %>
+<% if opts['rpm']['serial'] %>
+Serial: <%= opts['rpm']['serial'] %>
+<% end %>
+Summary: Rails Application Deployment RPM bundle
+<% if opts['rpm']['vendor'] %>
+Vendor: <%= opts['rpm']['vendor'] %>
+<% end %>
+<% if opts['rpm']['license'] %>
+License: <%= opts['rpm']['license'] %>
+<% end %>
+Group: Application/Internet
+# Distribution: how you want to call this app distribution?
+# Distribution: 
+# URL: could point to information about this specific package
+# URL: 
+Packager: <%= opts['rpm']['packager'] %>
+# AutoReqProv: see doc!!! we don't want shared libraries to the dependencies (optional)
+AutoReqProv: no
+# ExcludeArch: sparc alpha  # we don't want to support these platforms (optional)
+# ExclusiveArch: we _only_ want to build this package on x86_64
+<% if opts['rpm'][:exclusive_arch] %>
+ExclusiveArch: <%= opts['rpm']['exclusive_arch'] %>
+<% end %>
+# ExcludeOS: irix
+# ExclusiveOS: we only want to build this package on Linux
+ExclusiveOS: linux
+#
+# Prefix: /opt or /home/deploy - where this package is to be installed to / this is checked against the paths in the manifest
+Prefix: %{deploy_dir}
+BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
+#
+Provides: <%= opts['app']['name'] %>
+#
+# List of all tools needed to BUILD the RPM:
+# this also needs to list required YUM / RPM packages, such as shared libraries specific for the application!!
+#
+#BuildRequires: /usr/bin/bundle
+#BuildRequires: /usr/bin/gem
+
+
+# what is required for the built RPM to work once it's installed:
+Requires: ruby = 1.9.3p194
+# Conflicts with old Ruby 1.8.7 RPMs: this needs to go into the ruby19.spec file
+Obsoletes: ruby = 1.8.7
+Obsoletes: ruby-libs = 1.8.7
+Obsoletes: rubygems = 1.3.7-1.el6
+
+# REQUIREMENTS:
+
+<% opts['rpm']['requires'].each do |req|
+   #   req,ver = item.gsub(/\s+/,'').split(/,/)
+%>
+Requires: <%= req %>
+<% end %>
+
+#
+# Source:  typically where the source code for the RPM is .. but we don't have a source tar-ball in this case we don't need this!
+
+# What repository to pull the actual code from
+# (assuming git here, you'll need to change for svn or hg)
+%define git_repo <%= opts['git']['repo'] %>
+
+%define build_user <%= opts['build']['user'] %>
+%define build_group <%= opts['build']['group'] %>
+%define deploy_user <%= opts['deploy']['user'] %>
+%define deploy_group <%= opts['deploy']['group'] %>
+%define deploy_dir /home/%{deploy_user}
+
+# %define build_dir $RPM_BUILD_ROOT/%{name}
+
+%description
+<%= opts['description'] %>
+
+
+# HOOK which is run after RPM is built
+%clean
+sudo  rm -rf $RPM_BUILD_ROOT
+sudo rm -rf ./%name
+
+# HOOK is run before RPM is built:
+%prep
+ echo 'preparing...'
+ sudo rm -rf ./%name
+ sudo rm -rf $RPM_BUILD_ROOT/*
+ git clone %git_repo
+ # check it into Perforce into a dev-branch # VENDOR BRANCH / our check-in needs always win in a merge
+
+# HOOK for building RPM: (aka compiling)
+%build
+ echo "building in $RPM_BUILD_DIR ..."
+ cd %name
+# bundle install --deployment
+ # we can install the gems locally inside the app dir, because the production servers have exactly the same OS version
+ # and any libraries are required within this RPM.spec file:
+ GEM_PATH=$RPM_BUILD_DIR/%{name}/gems
+ sudo /usr/bin/bundle install --path $GEM_PATH --binstubs 
+ sudo chown -R %{build_user}:%{build_group} $RPM_BUILD_DIR
+ sudo chown -R %{build_user}:%{build_group} $GEM_PATH 
+ cp /usr/bin/bundle ./bin/     # because this is otherwise not correctly created
+ cp /usr/bin/rake ./bin/       # because this is otherwise not correctly created
+
+ # bundle package --all    # in case we want a local copy of the gems in production under vendor/cache
+                           # but this step is not really needed, because vendor/cache gems/ruby/1.9.1/cache are identical
+
+ bundle exec rake assets:precompile # pre-compile all assets for production
+
+ # bundler will remember in .bundle/config the last location that you specified where to install Gems
+ # So we need to fix the bundle path, in order to have bundler on the production servers pick up the already installed Gems
+ # from the local directory:
+ sed -i "s|BUNDLE_PATH.*|BUNDLE_PATH: %{prefix}/%{name}/latest/gems|" .bundle/config
+ sed -i "s|BUNDLE_BIN.*|BUNDLE_BIN: %{prefix}/%{name}/latest/bin|" .bundle/config
+
+ # these files are not needed for the deployment:
+ rm -rf .git .gitignore*
+ # we will replace ./tmp and ./log with directories %{prefix}/tmp and %{prefix}/log which survive updates of the RPM
+ # I could also use the %dir directive to add empty directories
+ rm -rf tmp log
+
+
+# Note:
+#   the following creates two nested directories with the app name on purpose!
+#   e.g. /home/rails/hello_world/hello_world
+#
+#   during installation, the deepest "hello_world" app directory will be renamed
+#   to the time-stamp of the deployment (similar to how Capistrano does it), and then sym-linked to 'latest'
+#
+#   log and tmp directories inside latest will link to directories with the same name one level further out.
+#
+#   e.g.:
+#
+# [rails@ip-10-145-147-157 ~]$ pwd
+# /home/rails
+# [rails@ip-10-145-147-157 ~]$ ls -atlr
+# total 52
+# -rw-r--r--.  1 rails rails  500 Feb 27  2012 .emacs
+# -rw-r--r--.  1 rails rails  124 Apr 23 06:53 .bashrc
+# -rw-r--r--.  1 rails rails   18 Apr 23 06:53 .bash_logout
+# drwx------.  2 rails rails 4096 Oct 12 18:35 .ssh
+# drwxr-xr-x.  5 root  root  4096 Oct 12 21:00 ..
+# lrwxrwxrwx.  1 rails rails   22 Oct 15 15:13 bin -> hello_world/latest/bin
+# -rw-------.  1 rails rails  760 Oct 15 17:43 .viminfo
+# lrwxrwxrwx.  1 rails rails   23 Oct 15 17:49 gems -> hello_world/latest/gems
+# drwxrwxr-x.  3 rails rails 4096 Oct 15 20:08 .emacs.d
+# -rw-r--r--.  1 rails rails  410 Oct 16 15:20 .bash_profile~
+# -rw-r--r--.  1 rails rails  412 Oct 16 16:38 .bash_profile
+# drwx------.  5 rails rails 4096 Oct 16 16:38 .
+# -rw-------.  1 rails rails 7198 Oct 16 20:23 .bash_history
+# drwxr-xr-x. 12 rails rails 4096 Oct 16 20:56 hello_world
+#
+# [rails@ip-10-145-147-157 ~]$ cd hello_world/
+# [rails@ip-10-145-147-157 hello_world]$ ls -atlr
+# total 48
+# drwxr-xr-x.  7 rails rails 4096 Oct 12 22:03 tmp
+# lrwxrwxrwx.  1 rails rails   10 Oct 15 15:24 bin -> latest/bin
+# lrwxrwxrwx.  1 rails rails   11 Oct 15 20:42 gems -> latest/gems
+# drwx------.  5 rails rails 4096 Oct 16 16:38 ..
+# drwxr-xr-x.  2 rails rails 4096 Oct 16 16:44 log
+# drwxr-xr-x. 14 rails rails 4096 Oct 16 20:46 2012-10-16_20:46:32
+# drwxr-xr-x. 14 rails rails 4096 Oct 16 20:50 2012-10-16_20:50:28
+# lrwxrwxrwx.  1 rails rails   43 Oct 16 20:56 latest -> /home/rails/hello_world/2012-10-16_20:56:17
+# drwxr-xr-x. 12 rails rails 4096 Oct 16 20:56 .
+# drwxr-xr-x. 14 rails rails 4096 Oct 16 20:56 2012-10-16_20:56:17
+# drwxrwxr-x.  2 rails rails 4096 Oct 16 20:56 run
+# [rails@ip-10-145-147-157 hello_world]$ 
+#
+# [rails@ip-10-145-147-157 hello_world]$ cd latest/
+# [rails@ip-10-145-147-157 latest]$ ls -l 
+# total 72
+# drwxr-xr-x. 8 rails rails 4096 Oct 16 20:56 app
+# drwxr-xr-x. 2 rails rails 4096 Oct 16 20:56 bin
+# drwxr-xr-x. 5 rails rails 4096 Oct 16 20:56 config
+# -rw-r--r--. 1 rails rails  160 Oct 16 20:53 config.ru
+# drwxr-xr-x. 2 rails rails 4096 Oct 16 20:56 db
+# drwxr-xr-x. 2 rails rails 4096 Oct 16 20:56 doc
+# -rw-r--r--. 1 rails rails  859 Oct 16 20:53 Gemfile
+# -rw-r--r--. 1 rails rails 2694 Oct 16 20:53 Gemfile.lock
+# drwxr-xr-x. 3 rails rails 4096 Oct 16 20:56 gems
+# drwxr-xr-x. 4 rails rails 4096 Oct 16 20:56 lib
+# lrwxrwxrwx. 1 rails rails   27 Oct 16 20:56 log -> /home/rails/hello_world/log
+# drwxr-xr-x. 3 rails rails 4096 Oct 16 20:56 public
+# -rw-r--r--. 1 rails rails  275 Oct 16 20:53 Rakefile
+# -rw-r--r--. 1 rails rails 9208 Oct 16 20:53 README.rdoc
+# drwxr-xr-x. 2 rails rails 4096 Oct 16 20:56 script
+# drwxr-xr-x. 7 rails rails 4096 Oct 16 20:56 test
+# lrwxrwxrwx. 1 rails rails   27 Oct 16 20:56 tmp -> /home/rails/hello_world/tmp
+# drwxr-xr-x. 5 rails rails 4096 Oct 16 20:56 vendor
+# [rails@ip-10-145-147-157 latest]$ 
+# [rails@ip-10-145-147-157 latest]$ ls gems/ruby/1.9.1/
+# bin  cache  doc  gems  specifications
+# [rails@ip-10-145-147-157 latest]$ ls vendor/
+# assets  cache  plugins
+
+# HOOK for installing the compiled bits into a directory structure which will then be bundled up into the actual RPM:
+%install
+  echo "IN INSTALL"
+  echo `pwd`
+  echo $RPM_BUILD_ROOT
+  mkdir -p $RPM_BUILD_ROOT/%{prefix}/%{name}
+  mv %{name} $RPM_BUILD_ROOT/%{prefix}/%{name}/
+
+# Manifest of all Files which are part of the RPM:
+%files
+%defattr(-,%{deploy_user},%{deploy_group},0755)
+%{prefix}/%{name}
+
+%doc
+
+# HOOKS FOR RPM INSTALLATION:
+%pre
+ # before RPM installation
+ # make sure the deploy user's directory is u+rwx,go+rx , group+world-readable
+ chmod 0755 %{prefix}
+
+%post
+ # after RPM installation
+ echo -n 'installing RPM into: '
+ echo `pwd`
+ # we might want to use the RPM-name here, instead of the time, or a combination thereof
+# export t=`date +'%Y%m%d_%T'`
+ export t=`date +'%F_%T'` # e.g. 2012-10-15_16:55:11 ... similar to how Capistrano does it
+ mv %{prefix}/%{name}/%{name} %{prefix}/%{name}/$t
+ mkdir -p %{prefix}/%{name}/tmp/assets
+ mkdir -p %{prefix}/%{name}/tmp/pids
+ mkdir -p %{prefix}/%{name}/tmp/sessions
+ mkdir -p %{prefix}/%{name}/tmp/sockets
+ mkdir -p %{prefix}/%{name}/run
+ mkdir -p %{prefix}/%{name}/log
+ rm -f %{prefix}/%{name}/latest
+ ln -s %{prefix}/%{name}/$t %{prefix}/%{name}/latest
+ ln -s %{prefix}/%{name}/tmp %{prefix}/%{name}/latest/tmp
+ ln -s %{prefix}/%{name}/log %{prefix}/%{name}/latest/log
+ ln -s %{prefix}/%{name}/run %{prefix}/%{name}/latest/run
+
+#  pushd %{prefix}/%{name}/latest
+#    # see: bundle help install ; make sure GEM_PATH is set in your .bash_profile for the deployment account
+#    GEM_PATH=%{prefix}/%{name}/latest/gems
+#    mkdir -p $GEM_PATH
+# #   bundle install --path $GEM_PATH --local --binstubs  # if --path is not provided, it installs the gems under /usr/lib64 still
+#  popd
+
+ # we assume that bin/unicorn is available under %{prefix} and $PATH is configured correctly
+ # those binaries (e.g. Unicorn) can also be accessed under %{prefix}/latest/bin (both are sym-links)
+
+ chown -R %{deploy_user}:%{deploy_group} %{prefix}
+
+ if [ ! -S /tmp/unicorn.sock ]
+ then
+   touch /tmp/unicorn.sock
+   # make sure that Nginx and Rails users are in the same group "deploy_group"
+   chown  %{deploy_user}:%{deploy_group} /tmp/unicorn.sock
+ fi
+
+ # call the Unicorn init.d script specific for this Rails application
+ pushd %{prefix}/%{name}/latest
+   if [ -e %{prefix}/%{name}/run/unicorn.pid ]
+   then
+     /etc/init.d/%{name} restart
+     # should use      /etc/init.d/%{name} reload
+   else
+     /etc/init.d/%{name} start
+   fi
+  popd
+  exit 0
+# HOOKS FOR UNINSTALLING:
+%prerun
+ # before RPM is erased  -  not used
+# echo "Dave, you want me to do what??"
+%postrun
+ # after RPM is erased  -  not used
+# echo "Cowardly refusing to uninstall %{name} RPM"
+
+%changelog
+# * Mon Oct 15 11:26:16 PDT 2012   THIS DATE format is incorrect
+# - 1.0.0r1 first release
+
+# --------------------------------------------------------------------------------
+# NOTES:
+#  yum install -y gcc gcc-c++ patch readline readline-devel zlib zlib-devel libyaml-devel libffi-devel openssl-devel make bzip2 autoconf automake libtool bison iconv-devel git
+#  yum install libxml2-devel libcurl libcurl-devel fuse-devel
+#
+#  yum install -y rpm-build rpmdevtools
+#  yum install libyaml-devel
+#  yum install libffi-devel
+#  rpmdev-setuptree
+
+# yum install gdbm-devel tcl-devel db4-devel byacc
+
+#  rpmbuild -bb something.spec
+
+# To build an RPM without Source, make sure that there is no %setup in your prep. Remove it.
+#
+# prep, %build and %install aren't necessary to build rpms, only %files
+# and %description. And, in your case, the %pre/%post/%preun/%postun to do
+# the actions you want.
+
+
+
+
