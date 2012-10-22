@@ -3,24 +3,34 @@ app:
   version: 1.0.0       # your rails app's version
 
 rpm:
+  license:  MIT License
   revision: 1        # each time you create the same RPM, the revision needs to be incremented, otherwise 1
   packager: Tilo Sloboda <tilo.sloboda@gmail.com>   # your name and email
   arch:  x86_64       # which architecture is this for? e.g. x86_64
 #
 #  serial:   12345     # optional; Serial is a consecutively growing number
 #  vendor:   ACME Inc. # optional; your company name if you distribute this RPM
-#  license:  MIT       # optional; licensing terms if you distribute this RPM
 
+
+# NOTE:  make sure you require the correct package names for the DB-backend(s) you are using in your Rails application:
+#
   requires:
   - libxml2
   - libyaml
   - libffi
   - nginx
-  - sqlite3
-  - sqlite3-devel
+  - sqlite
+  - sqlite-devel
+#  - mysql
+#  - mysql-devel
+#  - mongo-stable
+#  - mongo-stable-devel
+#  - mongo-stable-server
+#  - mongo-stable-debuginfo
+
 
 git:
-  repo: https://github.com/your-id/your-project.git
+  repo: https://github.com/roku-neteng/hello_world.git
 
 build:
   user: build
@@ -32,7 +42,5 @@ deploy:
 
 description: 
   This is an RPM which packages a Rails Application, all it\'s necessary Gems,\nand contains pre and post hooks in the RPM installation process to properly\nset-up the app on the production server(s).
-
-
 
 

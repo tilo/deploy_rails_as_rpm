@@ -75,7 +75,7 @@ Requires: <%= req %>
 
 # What repository to pull the actual code from
 # (assuming git here, you'll need to change for svn or hg)
-%define git_repo <%= opts['git']['repo'] %>
+%define git_repo <%= opts['git']['repo'].chomp %>
 
 %define build_user <%= opts['build']['user'] %>
 %define build_group <%= opts['build']['group'] %>
@@ -92,12 +92,12 @@ Requires: <%= req %>
 # HOOK which is run after RPM is built
 %clean
 sudo  rm -rf $RPM_BUILD_ROOT
-sudo rm -rf ./%name
+sudo rm -rf ./%{name}
 
 # HOOK is run before RPM is built:
 %prep
  echo 'preparing...'
- sudo rm -rf ./%name
+ sudo rm -rf ./%{name}
  sudo rm -rf $RPM_BUILD_ROOT/*
  git clone %git_repo
  # check it into Perforce into a dev-branch # VENDOR BRANCH / our check-in needs always win in a merge
