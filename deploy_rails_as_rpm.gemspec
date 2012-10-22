@@ -5,7 +5,7 @@ require 'deploy_rails_as_rpm/version'
 
 Gem::Specification.new do |gem|
   gem.name          = "deploy_rails_as_rpm"
-  gem.version       = DeployRailsAsRpm::VERSION
+  gem.version       = DeployRailsAsRPM::VERSION
   gem.authors       = ["Tilo Sloboda\n"]
   gem.email         = ["tilo.sloboda@gmail.com\n"]
   gem.description   = %q{Helps you to deploy your Rails app as an RPM. This Gem helps you generate an RPM.spec file from a given Rails application, build the RPM, and quickly deploy it to production servers -- without having to install RVM, install gems or bundles on your production servers.}
